@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>月次予算の暦ブレ</title>
+<style>
+:root { color-scheme: light dark;
+  --color-bg: #ffffff; --color-panel: #f7f6f3; --color-fg: #1f1e1c; --color-fg-muted: #6b6965; --color-border-line: #e3e1dc;
+  --color-ok: #1f7a4d; --color-bad: #c0392b; --color-warn: #c7861a;
+  --font-anthropic-sans: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
+  --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 16px; --cds-font-size-title: 24px; --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-pad-lg: 16px; --cds-radius: 10px; --cds-dur-slow: .3s; }
+@media (prefers-color-scheme: dark) { :root {
+  --color-bg: #1a1a19; --color-panel: #242422; --color-fg: #ecebe8; --color-fg-muted: #a3a19c; --color-border-line: #3a3936;
+  --color-ok: #5cc28b; --color-bad: #ef6f62; --color-warn: #e0a84a; } }
+html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); }
+#dash-root { padding: 16px; }
+.dash-skeleton { color: transparent !important; }
+.fc-days td { white-space: nowrap; }
+</style>
+<script>
+window.d3 = { sum: (a, f) => a.reduce((s, x, i) => s + (Number(f ? f(x, i) : x) || 0), 0) };
+(() => {
+  const DATA = {"holidays": [{"date": "2022-01-01", "name": "祝日"}, {"date": "2022-01-10", "name": "祝日"}, {"date": "2022-02-11", "name": "祝日"}, {"date": "2022-02-23", "name": "祝日"}, {"date": "2022-03-21", "name": "祝日"}, {"date": "2022-04-29", "name": "祝日"}, {"date": "2022-05-03", "name": "祝日"}, {"date": "2022-05-04", "name": "祝日"}, {"date": "2022-05-05", "name": "祝日"}, {"date": "2022-07-18", "name": "祝日"}, {"date": "2022-08-11", "name": "祝日"}, {"date": "2022-09-19", "name": "祝日"}, {"date": "2022-09-23", "name": "祝日"}, {"date": "2022-10-10", "name": "祝日"}, {"date": "2022-11-03", "name": "祝日"}, {"date": "2022-11-23", "name": "祝日"}, {"date": "2023-01-01", "name": "祝日"}, {"date": "2023-01-02", "name": "祝日"}, {"date": "2023-01-09", "name": "祝日"}, {"date": "2023-02-11", "name": "祝日"}, {"date": "2023-02-23", "name": "祝日"}, {"date": "2023-03-21", "name": "祝日"}, {"date": "2023-04-29", "name": "祝日"}, {"date": "2023-05-03", "name": "祝日"}, {"date": "2023-05-04", "name": "祝日"}, {"date": "2023-05-05", "name": "祝日"}, {"date": "2023-07-17", "name": "祝日"}, {"date": "2023-08-11", "name": "祝日"}, {"date": "2023-09-18", "name": "祝日"}, {"date": "2023-09-23", "name": "祝日"}, {"date": "2023-10-09", "name": "祝日"}, {"date": "2023-11-03", "name": "祝日"}, {"date": "2023-11-23", "name": "祝日"}, {"date": "2024-01-01", "name": "祝日"}, {"date": "2024-01-08", "name": "祝日"}, {"date": "2024-02-11", "name": "祝日"}, {"date": "2024-02-12", "name": "祝日"}, {"date": "2024-02-23", "name": "祝日"}, {"date": "2024-03-20", "name": "祝日"}, {"date": "2024-04-29", "name": "祝日"}, {"date": "2024-05-03", "name": "祝日"}, {"date": "2024-05-04", "name": "祝日"}, {"date": "2024-05-05", "name": "祝日"}, {"date": "2024-05-06", "name": "祝日"}, {"date": "2024-07-15", "name": "祝日"}, {"date": "2024-08-11", "name": "祝日"}, {"date": "2024-08-12", "name": "祝日"}, {"date": "2024-09-16", "name": "祝日"}, {"date": "2024-09-22", "name": "祝日"}, {"date": "2024-09-23", "name": "祝日"}, {"date": "2024-10-14", "name": "祝日"}, {"date": "2024-11-03", "name": "祝日"}, {"date": "2024-11-04", "name": "祝日"}, {"date": "2024-11-23", "name": "祝日"}, {"date": "2025-01-01", "name": "祝日"}, {"date": "2025-01-13", "name": "祝日"}, {"date": "2025-02-11", "name": "祝日"}, {"date": "2025-02-23", "name": "祝日"}, {"date": "2025-02-24", "name": "祝日"}, {"date": "2025-03-20", "name": "祝日"}, {"date": "2025-04-29", "name": "祝日"}, {"date": "2025-05-03", "name": "祝日"}, {"date": "2025-05-04", "name": "祝日"}, {"date": "2025-05-05", "name": "祝日"}, {"date": "2025-05-06", "name": "祝日"}, {"date": "2025-07-21", "name": "祝日"}, {"date": "2025-08-11", "name": "祝日"}, {"date": "2025-09-15", "name": "祝日"}, {"date": "2025-09-23", "name": "祝日"}, {"date": "2025-10-13", "name": "祝日"}, {"date": "2025-11-03", "name": "祝日"}, {"date": "2025-11-23", "name": "祝日"}, {"date": "2025-11-24", "name": "祝日"}, {"date": "2026-01-01", "name": "祝日"}, {"date": "2026-01-12", "name": "祝日"}, {"date": "2026-02-11", "name": "祝日"}, {"date": "2026-02-23", "name": "祝日"}, {"date": "2026-03-20", "name": "祝日"}, {"date": "2026-04-29", "name": "祝日"}, {"date": "2026-05-03", "name": "祝日"}, {"date": "2026-05-04", "name": "祝日"}, {"date": "2026-05-05", "name": "祝日"}, {"date": "2026-05-06", "name": "祝日"}, {"date": "2026-07-20", "name": "祝日"}, {"date": "2026-08-11", "name": "祝日"}, {"date": "2026-09-21", "name": "祝日"}, {"date": "2026-09-22", "name": "祝日"}, {"date": "2026-09-23", "name": "祝日"}, {"date": "2026-10-12", "name": "祝日"}, {"date": "2026-11-03", "name": "祝日"}, {"date": "2026-11-23", "name": "祝日"}, {"date": "2027-01-01", "name": "祝日"}, {"date": "2027-01-11", "name": "祝日"}, {"date": "2027-02-11", "name": "祝日"}, {"date": "2027-02-23", "name": "祝日"}, {"date": "2027-03-21", "name": "祝日"}, {"date": "2027-03-22", "name": "祝日"}, {"date": "2027-04-29", "name": "祝日"}, {"date": "2027-05-03", "name": "祝日"}, {"date": "2027-05-04", "name": "祝日"}, {"date": "2027-05-05", "name": "祝日"}, {"date": "2027-07-19", "name": "祝日"}, {"date": "2027-08-11", "name": "祝日"}, {"date": "2027-09-20", "name": "祝日"}, {"date": "2027-09-23", "name": "祝日"}, {"date": "2027-10-11", "name": "祝日"}, {"date": "2027-11-03", "name": "祝日"}, {"date": "2027-11-23", "name": "祝日"}], "daily_sales": [{"day_type": "平日", "daily_sales": 100000}, {"day_type": "土曜", "daily_sales": 130000}, {"day_type": "日曜", "daily_sales": 160000}, {"day_type": "祝日", "daily_sales": 160000}], "seasonal": [{"month": 1, "factor": 0.95, "note": ""}, {"month": 2, "factor": 0.88, "note": "ニッパチ(12,1月の過剰支出）寒さで外出激減"}, {"month": 3, "factor": 1.05, "note": ""}, {"month": 4, "factor": 1.0, "note": ""}, {"month": 5, "factor": 1.0, "note": ""}, {"month": 6, "factor": 0.95, "note": "雨で大きく変動可能性あり"}, {"month": 7, "factor": 1.02, "note": ""}, {"month": 8, "factor": 1.15, "note": "夏休み売上増加"}, {"month": 9, "factor": 1.0, "note": ""}, {"month": 10, "factor": 1.0, "note": ""}, {"month": 11, "factor": 0.92, "note": "最も落ち込む / 年末控え"}, {"month": 12, "factor": 1.25, "note": "宴会見込み"}], "store_presets": [{"store_type": "郊外ファミリー", "kind": "daily", "key": "平日", "value": 80000, "note": ""}, {"store_type": "郊外ファミリー", "kind": "daily", "key": "金曜", "value": 95000, "note": ""}, {"store_type": "郊外ファミリー", "kind": "daily", "key": "土曜", "value": 180000, "note": ""}, {"store_type": "郊外ファミリー", "kind": "daily", "key": "日曜", "value": 200000, "note": ""}, {"store_type": "郊外ファミリー", "kind": "daily", "key": "祝日", "value": 190000, "note": ""}, {"store_type": "郊外ファミリー", "kind": "daily", "key": "祝前日", "value": 10000, "note": "翌日が祝日の夜の上乗せ"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "1", "value": 1.0, "note": "正月の家族来店"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "2", "value": 0.88, "note": "寒さで外出減"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "3", "value": 1.05, "note": "春休み"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "4", "value": 0.95, "note": "新生活で出費控え"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "5", "value": 1.08, "note": "GWの家族外食"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "6", "value": 0.9, "note": "梅雨"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "7", "value": 1.02, "note": ""}, {"store_type": "郊外ファミリー", "kind": "season", "key": "8", "value": 1.18, "note": "夏休み・お盆の帰省"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "9", "value": 0.95, "note": ""}, {"store_type": "郊外ファミリー", "kind": "season", "key": "10", "value": 0.98, "note": ""}, {"store_type": "郊外ファミリー", "kind": "season", "key": "11", "value": 0.93, "note": "年末前の買い控え"}, {"store_type": "郊外ファミリー", "kind": "season", "key": "12", "value": 1.1, "note": "クリスマス・年末"}, {"store_type": "オフィスランチ", "kind": "daily", "key": "平日", "value": 120000, "note": ""}, {"store_type": "オフィスランチ", "kind": "daily", "key": "金曜", "value": 110000, "note": ""}, {"store_type": "オフィスランチ", "kind": "daily", "key": "土曜", "value": 40000, "note": ""}, {"store_type": "オフィスランチ", "kind": "daily", "key": "日曜", "value": 25000, "note": ""}, {"store_type": "オフィスランチ", "kind": "daily", "key": "祝日", "value": 25000, "note": ""}, {"store_type": "オフィスランチ", "kind": "daily", "key": "祝前日", "value": 5000, "note": "翌日が祝日の夜の上乗せ"}, {"store_type": "オフィスランチ", "kind": "season", "key": "1", "value": 0.92, "note": "正月休み明けまで閑散"}, {"store_type": "オフィスランチ", "kind": "season", "key": "2", "value": 0.97, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "3", "value": 1.05, "note": "歓送迎会"}, {"store_type": "オフィスランチ", "kind": "season", "key": "4", "value": 1.05, "note": "歓迎会"}, {"store_type": "オフィスランチ", "kind": "season", "key": "5", "value": 0.95, "note": "GWで出社減"}, {"store_type": "オフィスランチ", "kind": "season", "key": "6", "value": 1.0, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "7", "value": 1.0, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "8", "value": 0.85, "note": "お盆休み"}, {"store_type": "オフィスランチ", "kind": "season", "key": "9", "value": 1.0, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "10", "value": 1.02, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "11", "value": 1.0, "note": ""}, {"store_type": "オフィスランチ", "kind": "season", "key": "12", "value": 1.1, "note": "忘年会"}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "平日", "value": 110000, "note": ""}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "金曜", "value": 200000, "note": ""}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "土曜", "value": 150000, "note": ""}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "日曜", "value": 80000, "note": ""}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "祝日", "value": 90000, "note": ""}, {"store_type": "駅前居酒屋", "kind": "daily", "key": "祝前日", "value": 80000, "note": "翌日が祝日の夜の上乗せ"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "1", "value": 0.9, "note": "新年会はあるが正月休みで出足が遅い"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "2", "value": 0.85, "note": "最閑散期・日数も少ない"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "3", "value": 1.12, "note": "歓送迎会"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "4", "value": 1.05, "note": "歓迎会"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "5", "value": 0.95, "note": "GWで地元客が減る"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "6", "value": 0.93, "note": "梅雨・ボーナス前"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "7", "value": 1.03, "note": "暑気払い・ボーナス"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "8", "value": 0.88, "note": "お盆で会社員が不在"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "9", "value": 0.95, "note": ""}, {"store_type": "駅前居酒屋", "kind": "season", "key": "10", "value": 1.0, "note": ""}, {"store_type": "駅前居酒屋", "kind": "season", "key": "11", "value": 1.02, "note": "忘年会の前倒し"}, {"store_type": "駅前居酒屋", "kind": "season", "key": "12", "value": 1.3, "note": "忘年会のピーク"}, {"store_type": "観光地", "kind": "daily", "key": "平日", "value": 70000, "note": ""}, {"store_type": "観光地", "kind": "daily", "key": "金曜", "value": 90000, "note": ""}, {"store_type": "観光地", "kind": "daily", "key": "土曜", "value": 220000, "note": ""}, {"store_type": "観光地", "kind": "daily", "key": "日曜", "value": 180000, "note": ""}, {"store_type": "観光地", "kind": "daily", "key": "祝日", "value": 230000, "note": ""}, {"store_type": "観光地", "kind": "daily", "key": "祝前日", "value": 40000, "note": "翌日が祝日の夜の上乗せ"}, {"store_type": "観光地", "kind": "season", "key": "1", "value": 0.9, "note": "三が日以外は閑散"}, {"store_type": "観光地", "kind": "season", "key": "2", "value": 0.75, "note": "最閑散期"}, {"store_type": "観光地", "kind": "season", "key": "3", "value": 1.0, "note": "春休み"}, {"store_type": "観光地", "kind": "season", "key": "4", "value": 1.05, "note": "花見"}, {"store_type": "観光地", "kind": "season", "key": "5", "value": 1.2, "note": "GW"}, {"store_type": "観光地", "kind": "season", "key": "6", "value": 0.8, "note": "梅雨の閑散期"}, {"store_type": "観光地", "kind": "season", "key": "7", "value": 1.05, "note": "夏休みの始まり"}, {"store_type": "観光地", "kind": "season", "key": "8", "value": 1.35, "note": "夏休み・お盆のピーク"}, {"store_type": "観光地", "kind": "season", "key": "9", "value": 1.0, "note": "シルバーウィーク"}, {"store_type": "観光地", "kind": "season", "key": "10", "value": 1.1, "note": "紅葉・行楽"}, {"store_type": "観光地", "kind": "season", "key": "11", "value": 1.1, "note": "紅葉"}, {"store_type": "観光地", "kind": "season", "key": "12", "value": 0.85, "note": "年末前の閑散"}]};
+  const DEFAULTS = {"year": null, "wd": null, "sat": null, "sun": null, "hol": null, "s1": null, "s2": null, "s3": null, "s4": null, "s5": null, "s6": null, "s7": null, "s8": null, "s9": null, "s10": null, "s11": null, "s12": null, "store": null, "month": null, "fri": null, "pre": null};
+  let params = { ...DEFAULTS };
+  const calcs = {}, subs = [];
+  const run = () => subs.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+  window.dash = {
+    colors: ['#2f6fb0', '#c2703d', '#3b8f6a', '#8a5bb5', '#b5487a', '#6b7a8f', '#c9a227', '#4a9bb5'],
+    calc: (id, def) => { calcs[id] = def; },
+    data: (id) => {
+      if (DATA[id]) return { status: 'ok', data: DATA[id], meta: [] };
+      const c = calcs[id];
+      if (!c) return { status: 'missing', data: [] };
+      if (!c._v) c._v = c.fn(...c.inputs.map((i) => window.dash.data(i).data));
+      return { status: 'ok', data: c._v, meta: [] };
+    },
+    onData: (fn) => { subs.push(fn); fn(); },
+    params: () => ({ ...params }),
+    setParams: (o) => { params = { ...params, ...o }; run(); },
+    resetParams: () => { params = { ...DEFAULTS }; run(); },
+    refresh: () => {}, setLink: () => {},
+  };
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 150); });
+})();
+</script>
+</head><body><div id="dash-root">
+<style>
+.fc { font-family: var(--font-anthropic-sans); font-variant-numeric: tabular-nums; line-height: 1.6; max-width: 760px; margin-inline: auto; display: grid; gap: var(--cds-gap-md); }
+.fc-head h1 { font-weight: 600; letter-spacing: .02em; font-size: var(--cds-font-size-title); margin: 0 0 var(--cds-gap-sm); }
+.fc-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; }
+.fc-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-sm); }
+.fc-note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0 0 var(--cds-gap-sm); line-height: 1.6; }
+.fc-seg { display: flex; gap: var(--cds-gap-xs); flex-wrap: wrap; }
+.fc-seg button, .fc-btn { font: inherit; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+.fc-seg button[aria-pressed="true"] { background: var(--color-fg); color: var(--color-bg); border-color: var(--color-fg); }
+.fc-up { color: var(--color-ok); } .fc-down { color: var(--color-bad); }
+
+/* inputs */
+.fc-vars { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--cds-gap-sm) var(--cds-gap-md); margin-top: var(--cds-gap-md); }
+.fc-field { display: grid; grid-template-columns: 3.2rem 1fr; align-items: center; gap: var(--cds-gap-sm); }
+.fc-field .nm small { display: block; font-size: 11px; color: var(--color-fg-muted); }
+.fc-step { display: grid; grid-template-columns: 44px 1fr 44px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; background: var(--color-bg); }
+.fc-step button { font: inherit; font-size: 20px; border: 0; background: transparent; color: var(--color-fg); cursor: pointer; height: 42px; }
+.fc-step input { font: inherit; font-size: 16px; text-align: center; border: 0; border-inline: 1px solid var(--color-border-line); background: transparent; color: var(--color-fg); min-width: 0; font-variant-numeric: tabular-nums; }
+.fc-step.changed { border-color: var(--color-warn); }
+.fc-details { margin-top: var(--cds-gap-md); }
+.fc-details summary { cursor: pointer; font-weight: var(--cds-font-weight-medium); padding: 4px 0; }
+.fc-season { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--cds-gap-sm) var(--cds-gap-md); margin-top: var(--cds-gap-sm); }
+.fc-bar-row { display: flex; justify-content: space-between; align-items: center; gap: var(--cds-gap-sm); margin-top: var(--cds-gap-md); flex-wrap: wrap; }
+
+/* month buttons */
+.fc-months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.fc-months button { font: inherit; border: 1px solid var(--color-border-line); background: var(--color-bg); color: var(--color-fg); border-radius: var(--cds-radius); padding: 6px 0; cursor: pointer; display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+.fc-months button .m { font-weight: var(--cds-font-weight-medium); }
+.fc-months button .p { font-size: 11px; }
+.fc-months button[aria-pressed="true"] { border-color: var(--color-fg); box-shadow: inset 0 0 0 1px var(--color-fg); }
+
+/* result */
+.fc-res-top { display: flex; align-items: baseline; gap: var(--cds-gap-md); flex-wrap: wrap; }
+.fc-big { font-weight: 600; letter-spacing: -.01em; font-size: calc(var(--cds-font-size-title) * 1.6); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.fc-diff { font-size: var(--cds-font-size-heading); font-variant-numeric: tabular-nums; }
+.fc-take { margin: var(--cds-gap-sm) 0 var(--cds-gap-md); line-height: 1.7; }
+.fc-why { display: grid; gap: 6px; margin-bottom: var(--cds-gap-md); }
+.fc-why-row { display: grid; grid-template-columns: 1fr auto; gap: var(--cds-gap-sm); padding: 8px 12px; border-radius: var(--cds-radius); background: var(--color-bg); border: 1px solid var(--color-border-line); font-variant-numeric: tabular-nums; }
+.fc-why-row .y { font-weight: var(--cds-font-weight-medium); }
+.fc-extra-bg { background: color-mix(in srgb, var(--color-fg) 8%, var(--color-panel)); }
+.fc-why-row.fc-extra-bg { border-style: dashed; border-color: var(--color-fg-muted); }
+.fc-field.fc-extra-bg { padding: 8px; border-radius: var(--cds-radius); border: 1px dashed var(--color-fg-muted); grid-column: 1 / -1; }
+.fc-badge { display: inline-block; font-size: 11px; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: var(--color-fg-muted); color: var(--color-panel); margin-left: 6px; vertical-align: 1px; font-weight: 500; }
+.fc-days tr.fc-extra-bg td { border-top: 1px dashed var(--color-fg-muted); }
+.fc-days tr.fc-extra-bg td:first-child { padding-left: 8px; }
+.fc-sum-extra { padding: 0 5px; border-radius: 4px; border: 1px dashed var(--color-fg-muted); }
+.fc-days { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: var(--cds-font-size-body); }
+.fc-days th, .fc-days td { padding: 6px 4px; text-align: right; border-top: 1px solid var(--color-border-line); }
+.fc-days th { font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.fc-days th:first-child, .fc-days td:first-child { text-align: left; }
+.fc-annual { margin-top: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-variant-numeric: tabular-nums; }
+#result { min-height: 26rem; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="fc">
+  <header class="fc-head" id="top">
+    <h1>月次予算の暦ブレ</h1>
+    <div class="fc-seg" id="years" data-source="calendar"></div>
+    <p class="fc-note" style="margin:10px 0 0">※想定値：店舗スタイル別の日販・季節補正は実績ではなく想定の目安です（「標準」のみExcelの変数マスタの値）。</p>
+  </header>
+
+  <section class="fc-card" id="store">
+    <h2>店舗スタイル</h2>
+    <div class="fc-seg" id="store-types" data-source="store_presets"></div>
+    <p class="fc-note" id="store-note" style="margin:8px 0 0"></p>
+    <details class="fc-details" id="daily-box">
+      <summary>曜日別の日販 <span class="fc-note" id="daily-summary" style="font-weight:400"></span></summary>
+      <p class="fc-note" style="margin-top:6px">祝前日は「翌日が祝日の月〜木・日曜」の夜に足す上乗せ額です。金曜・土曜はもともと翌日が休みなので足しません。</p>
+      <div class="fc-vars" id="daily-inputs" data-source="daily_sales store_presets"></div>
+    </details>
+    <details class="fc-details" id="season-box">
+      <summary>季節補正（月別）</summary>
+      <p class="fc-note" style="margin-top:6px">前年の同じ月にもかかるので、前年比（%）は変わらず影響額（円）だけが変わります。</p>
+      <div class="fc-season" id="season-inputs" data-source="seasonal store_presets"></div>
+    </details>
+    <div class="fc-bar-row">
+      <span class="fc-note" id="changed-note" style="margin:0"></span>
+      <button class="fc-btn" id="reset">このスタイルの初期値に戻す</button>
+    </div>
+  </section>
+
+  <section class="fc-card" id="month-pick">
+    <h2>月を選ぶ</h2>
+    <div class="fc-months" id="months" data-source="calendar daily_sales seasonal store_presets"></div>
+  </section>
+
+  <section class="fc-card" id="result" data-source="calendar daily_sales seasonal store_presets">
+    <div class="fc-note" id="res-label">—</div>
+    <div class="fc-res-top">
+      <div class="fc-big dash-skeleton" id="res-pct">—</div>
+      <div class="fc-diff dash-skeleton" id="res-diff">—</div>
+    </div>
+    <p class="fc-take dash-skeleton" id="takeaway">—</p>
+    <div class="fc-why" id="why"></div>
+    <table class="fc-days" id="days">
+      <thead><tr><th>日数</th><th>前年</th><th>今年</th><th>差</th><th>単価×補正</th></tr></thead>
+      <tbody id="days-body"></tbody>
+    </table>
+    <div class="fc-annual" id="annual">—</div>
+  </section>
+</div>
+
+<script>
+dash.calc('calendar', {
+  inputs: ['holidays'],
+  title: '月別の曜日・祝日日数',
+  description: '祝日マスタの各年について、月ごとの平日（月〜木）・金曜・土曜・日曜・祝日の日数を数えます（祝日は曜日より優先）。祝前日は翌日が祝日の月〜木・日曜（祝日と12/31を除く）の数で、その日の曜日にも数えたまま上乗せ分として別に数えます。',
+  fn: (holidays) => {
+    const hol = new Set(holidays.map((h) => String(h.date).slice(0, 10)));
+    const years = [...new Set([...hol].map((d) => Number(d.slice(0, 4))))].sort((a, b) => a - b);
+    const rows = [];
+    for (const year of years) {
+      for (let month = 1; month <= 12; month++) {
+        const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        let weekday = 0, fri = 0, sat = 0, sun = 0, holiday = 0, pre_hol = 0;
+        for (let d = 1; d <= days; d++) {
+          const key = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+          const dow = new Date(Date.UTC(year, month - 1, d)).getUTCDay();
+          if (hol.has(key)) holiday++;
+          else if (dow === 6) sat++;
+          else if (dow === 0) sun++;
+          else if (dow === 5) fri++;
+          else weekday++;
+          const nx = new Date(Date.UTC(year, month - 1, d + 1)).toISOString().slice(0, 10);
+          if (!hol.has(key) && hol.has(nx) && dow !== 5 && dow !== 6 && !(month === 12 && d === 31)) pre_hol++;
+        }
+        rows.push({ ym: year + '-' + String(month).padStart(2, '0'), year, month, days, weekday, fri, sat, sun, holiday, pre_hol });
+      }
+    }
+    return rows;
+  },
+});
+
+(() => {
+  const TYPES = [
+    { key: 'weekday', p: 'wd', name: '平日', label: '月〜木' },
+    { key: 'fri', p: 'fri', name: '金曜' },
+    { key: 'sat', p: 'sat', name: '土曜' },
+    { key: 'sun', p: 'sun', name: '日曜' },
+    { key: 'holiday', p: 'hol', name: '祝日' },
+    { key: 'pre_hol', p: 'pre', name: '祝前日', label: '夜の上乗せ', short: '祝前+' },
+  ];
+  const STD = '標準';
+  const STORE_NOTE = {
+    '標準': 'Excelの変数マスタの値。土日祝がやや強い一般的な店。マスタに無い金曜は平日と同額、祝前日の上乗せは0で開始（Excelと同じ結果）。',
+    '郊外ファミリー': '土日祝が平日の2倍以上。週末・祝日が1日増減すると大きく振れる。',
+    'オフィスランチ': '平日が主役で土日祝は細い。祝日が増える月ほど落ちる。',
+    '駅前居酒屋': '金曜が突出し、土曜が次点。日曜・祝日は弱い。金曜と祝前日の数、12月の忘年会で大きく振れる。',
+    '観光地': '土曜と祝日が平日の3倍前後。連休の並びと行楽シーズンで大きく振れる。',
+  };
+  const OVR = ['wd', 'fri', 'sat', 'sun', 'hol', 'pre', ...Array.from({ length: 12 }, (_, i) => 's' + (i + 1))];
+
+  const sign = (v) => (v > 1e-9 ? '+' : v < -1e-9 ? '−' : '±');
+  const man = (v) => (v / 10000).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '万';
+  const sman = (v) => sign(v) + man(Math.abs(v));
+  const pctv = (v) => sign(v) + Math.abs(v * 100).toFixed(1) + '%';
+  const cls = (v) => (v > 1e-9 ? 'fc-up' : v < -1e-9 ? 'fc-down' : '');
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, text) => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const fmtYen = (v) => Math.round(v).toLocaleString('ja-JP');
+  const parseYen = (s) => Number(String(s).replace(/[,，円\s]/g, ''));
+  const fmtF = (v) => v.toFixed(2);
+  const parseF = (s) => Number(String(s).replace(/[^\d.]/g, ''));
+
+  // defaults for every store type: 標準 from the Excel master, the rest from the presets file
+  function presets(dsRows, seaRows, preRows) {
+    const out = {};
+    out[STD] = { daily: {}, season: {}, notes: {} };
+    for (const t of TYPES) { const r = dsRows.find((x) => x.day_type === t.name); out[STD].daily[t.key] = r ? Number(r.daily_sales) : null; }
+    if (out[STD].daily.fri == null) out[STD].daily.fri = out[STD].daily.weekday;
+    for (const t of TYPES) if (out[STD].daily[t.key] == null) out[STD].daily[t.key] = 0;
+    for (const r of seaRows) { out[STD].season[Number(r.month)] = Number(r.factor); out[STD].notes[Number(r.month)] = r.note || ''; }
+    for (const r of preRows) {
+      const o = (out[r.store_type] ||= { daily: {}, season: {}, notes: {} });
+      if (r.kind === 'daily') { const t = TYPES.find((x) => x.name === r.key); if (t) o.daily[t.key] = Number(r.value); }
+      else { o.season[Number(r.key)] = Number(r.value); o.notes[Number(r.key)] = r.note || ''; }
+    }
+    for (const o of Object.values(out)) for (const t of TYPES) if (o.daily[t.key] == null) o.daily[t.key] = t.key === 'fri' ? (o.daily.weekday || 0) : 0;
+    return out;
+  }
+  function readVars(P, store) {
+    const p = dash.params(), d = P[store];
+    const num = (v, dflt) => (v == null || v === '' || isNaN(Number(v)) ? dflt : Number(v));
+    const adj = {}, sAdj = {};
+    for (const t of TYPES) adj[t.key] = num(p[t.p], d.daily[t.key]);
+    for (let m = 1; m <= 12; m++) sAdj[m] = num(p['s' + m], d.season[m] ?? 1);
+    return { base: d.daily, sBase: d.season, notes: d.notes, adj, sAdj };
+  }
+  const monthSales = (c, ds, s) => TYPES.reduce((a, t) => a + (c[t.key] || 0) * (ds[t.key] || 0), 0) * (s[c.month] ?? 1);
+
+  function stepper(param, step, fmt, parse) {
+    const wrap = el('div', { class: 'fc-step' });
+    const minus = el('button', { type: 'button', 'aria-label': '減らす' }, '−');
+    const input = el('input', { inputmode: 'decimal', 'data-param': param });
+    const plus = el('button', { type: 'button', 'aria-label': '増やす' }, '+');
+    const set = (v) => { if (isFinite(v) && v >= 0) dash.setParams({ [param]: Number(v.toFixed(6)) }); };
+    minus.addEventListener('click', () => set(Number(input.dataset.v) - step));
+    plus.addEventListener('click', () => set(Number(input.dataset.v) + step));
+    input.addEventListener('change', () => { const v = parse(input.value); if (isFinite(v) && v >= 0) set(v); else input.value = fmt(Number(input.dataset.v)); });
+    input.addEventListener('blur', () => { input.value = fmt(Number(input.dataset.v)); });
+    wrap.append(minus, input, plus);
+    return wrap;
+  }
+  function updateStepper(wrap, value, base, fmt, label) {
+    const input = wrap.querySelector('input');
+    input.dataset.v = String(value);
+    if (input !== document.activeElement) input.value = fmt(value);
+    wrap.classList.toggle('changed', Math.abs(value - base) > 1e-9);
+    const sm = wrap.parentElement.querySelectorAll('small'); sm[sm.length - 1].textContent = label;
+  }
+
+  let built = false;
+  function buildInputs() {
+    const di = $('daily-inputs'); di.replaceChildren();
+    for (const t of TYPES) {
+      const f = el('div', { class: 'fc-field' + (t.key === 'pre_hol' ? ' fc-extra-bg' : '') });
+      const nm = el('div', { class: 'nm' }, t.name); if (t.key === 'pre_hol') nm.append(el('span', { class: 'fc-badge', style: 'margin-left:0;display:table' }, '上乗せ')); else if (t.label) nm.append(el('small', { style: 'margin-bottom:0' }, t.label)); nm.append(el('small'));
+      const st = stepper(t.p, 5000, fmtYen, parseYen); st.dataset.key = t.key;
+      f.append(nm, st); di.append(f);
+    }
+    const si = $('season-inputs'); si.replaceChildren();
+    for (let m = 1; m <= 12; m++) {
+      const f = el('div', { class: 'fc-field' });
+      const nm = el('div', { class: 'nm' }, m + '月'); nm.append(el('small'));
+      const st = stepper('s' + m, 0.01, fmtF, parseF); st.dataset.month = String(m);
+      const note = el('div', { class: 'fc-note', style: 'grid-column:2;margin:-4px 0 0' }); note.dataset.note = String(m);
+      f.append(nm, st, note); si.append(f);
+    }
+    built = true;
+  }
+  const clearOverrides = () => Object.fromEntries(OVR.map((k) => [k, null]));
+  $('reset').addEventListener('click', () => dash.setParams(clearOverrides()));
+
+  const SK = ['res-pct', 'res-diff', 'takeaway'];
+  const setSkeleton = (on) => { for (const id of SK) $(id).classList.toggle('dash-skeleton', on); };
+
+  dash.onData(() => {
+    const cal = dash.data('calendar'), dsd = dash.data('daily_sales'), sea = dash.data('seasonal'), pre = dash.data('store_presets');
+    const all = [cal, dsd, sea, pre];
+    if (all.some((d) => d.status === 'error' || d.status === 'missing')) {
+      setSkeleton(false);
+      $('res-pct').textContent = '—'; $('res-diff').textContent = '';
+      const t = $('takeaway'); t.replaceChildren();
+      const dot = el('span', { style: 'display:inline-block;width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad);margin-right:6px' });
+      t.append(dot, el('span', { style: 'color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)' }, 'Failed to load'));
+      return;
+    }
+    if (all.some((d) => d.status !== 'ok')) { setSkeleton(true); return; }
+    setSkeleton(false);
+
+    const P = presets(dsd.data, sea.data, pre.data);
+    const storeNames = [STD, ...Object.keys(P).filter((k) => k !== STD)];
+    const params = dash.params();
+    const store = storeNames.includes(params.store) ? params.store : STD;
+    const V = readVars(P, store);
+
+    // year
+    const calRows = cal.data;
+    const years = [...new Set(calRows.map((r) => r.year))].sort((a, b) => a - b);
+    const targets = years.slice(1);
+    const now = new Date(), nowY = now.getFullYear();
+    let year = Number(params.year);
+    if (!targets.includes(year)) year = targets.includes(nowY) ? nowY : targets[targets.length - 1];
+    let month = Number(params.month);
+    if (!(month >= 1 && month <= 12)) month = now.getMonth() + 1;
+
+    const yb = $('years'); yb.replaceChildren();
+    for (const t of targets) {
+      const b = el('button', { type: 'button', 'aria-pressed': String(t === year) }, t + '年' + (t === nowY ? '（今年）' : t === nowY + 1 ? '（来年）' : ''));
+      b.addEventListener('click', () => dash.setParams({ year: t }));
+      yb.append(b);
+    }
+
+    // store type
+    const sb = $('store-types'); sb.replaceChildren();
+    for (const s of storeNames) {
+      const b = el('button', { type: 'button', 'aria-pressed': String(s === store) }, s);
+      b.addEventListener('click', () => { if (s !== store) dash.setParams({ store: s, ...clearOverrides() }); });
+      sb.append(b);
+    }
+    $('store-note').textContent = (STORE_NOTE[store] || '') + (store !== STD ? '（※想定値）' : '');
+
+    if (!built) buildInputs();
+    for (const st of $('daily-inputs').querySelectorAll('.fc-step')) { const k = st.dataset.key; updateStepper(st, V.adj[k], V.base[k], fmtYen, '初期 ' + fmtYen(V.base[k])); }
+    const dsum = $('daily-summary'); dsum.replaceChildren();
+    TYPES.forEach((t, i) => {
+      const txt = (t.short || t.name.slice(0, 1)) + (V.adj[t.key] / 10000).toLocaleString('ja-JP', { maximumFractionDigits: 1 });
+      if (i) dsum.append(document.createTextNode(' '));
+      dsum.append(t.key === 'pre_hol' ? el('span', { class: 'fc-sum-extra' }, txt) : document.createTextNode(txt));
+    });
+    dsum.append(document.createTextNode('（万）'));
+    for (const st of $('season-inputs').querySelectorAll('.fc-step')) { const m = Number(st.dataset.month); updateStepper(st, V.sAdj[m], V.sBase[m] ?? 1, fmtF, '初期 ' + fmtF(V.sBase[m] ?? 1)); }
+    for (const n of $('season-inputs').querySelectorAll('[data-note]')) n.textContent = V.notes[Number(n.dataset.note)] || '';
+    const nChanged = OVR.filter((k) => params[k] != null && params[k] !== '').length;
+    $('changed-note').textContent = nChanged ? `${nChanged}項目を変更中（枠が色付きの項目）` : `「${store}」の初期値で計算中`;
+
+    // every month's impact (same assumptions both years → pure calendar effect)
+    const res = calRows.filter((r) => r.year === year).sort((a, b) => a.month - b.month).map((c) => {
+      const p = calRows.find((r) => r.year === year - 1 && r.month === c.month);
+      const f = V.sAdj[c.month] ?? 1;
+      const cur = monthSales(c, V.adj, V.sAdj), prev = monthSales(p, V.adj, V.sAdj);
+      const parts = TYPES.map((t) => ({ t, d: c[t.key] - p[t.key], yen: (c[t.key] - p[t.key]) * V.adj[t.key] * f }))
+        .filter((x) => x.d !== 0).sort((a, b) => Math.abs(b.yen) - Math.abs(a.yen));
+      return { month: c.month, c, p, f, cur, prev, diff: cur - prev, r: prev ? cur / prev - 1 : 0, parts };
+    });
+
+    // month buttons with their % as a mini overview
+    const mb = $('months'); mb.replaceChildren();
+    for (const r of res) {
+      const b = el('button', { type: 'button', 'aria-pressed': String(r.month === month), 'aria-label': `${r.month}月 前年比 ${pctv(r.r)}` });
+      b.append(el('span', { class: 'm' }, r.month + '月'), el('span', { class: 'p ' + cls(r.r) }, pctv(r.r)));
+      b.addEventListener('click', () => dash.setParams({ month: r.month }));
+      mb.append(b);
+    }
+
+    // selected month
+    const r = res.find((x) => x.month === month);
+    $('res-label').textContent = `${year}年${month}月 の前年比（${store}・暦の影響）`;
+    const rp = $('res-pct'); rp.textContent = pctv(r.r); rp.className = 'fc-big ' + cls(r.r);
+    const rd = $('res-diff'); rd.textContent = sman(r.diff) + '円'; rd.className = 'fc-diff ' + cls(r.diff);
+
+    const tk = $('takeaway');
+    if (!r.parts.length) tk.textContent = `${month}月は平日・土曜・日曜・祝日の日数が前年と同じなので、暦による増減はありません。予算は前年並みで組めます。`;
+    else {
+      const words = r.parts.map((x) => `${x.t.name}が${Math.abs(x.d)}日${x.d > 0 ? '増え' : '減り'}`).join('、');
+      tk.textContent = `${words}ます。そのため売上は前年より${man(Math.abs(r.diff))}円${r.diff >= 0 ? '多く' : '少なく'}見込まれます。`;
+    }
+
+    const why = $('why'); why.replaceChildren();
+    for (const x of r.parts) {
+      const ex = x.t.key === 'pre_hol';
+      const row = el('div', { class: 'fc-why-row' + (ex ? ' fc-extra-bg' : '') });
+      const left = el('div');
+      left.append(el('span', { class: 'y' }, `${ex ? '祝前日の夜' : x.t.name} ${sign(x.d)}${Math.abs(x.d)}日`));
+      if (ex) left.append(el('span', { class: 'fc-badge' }, '上乗せ'));
+      left.append(el('span', { class: 'fc-note' }, `  ${fmtYen(V.adj[x.t.key])}円 × ${fmtF(r.f)} × ${sign(x.d)}${Math.abs(x.d)}`));
+      row.append(left, el('div', { class: cls(x.yen) }, sman(x.yen) + '円'));
+      why.append(row);
+    }
+
+    const tb = $('days-body'); tb.replaceChildren();
+    for (const t of TYPES) {
+      const d = r.c[t.key] - r.p[t.key];
+      const ex = t.key === 'pre_hol';
+      const tr = el('tr', ex ? { class: 'fc-extra-bg' } : {});
+      const nameTd = el('td', {}, ex ? '＋祝前日の夜' : t.name + (t.label ? '（' + t.label + '）' : ''));
+      if (ex) nameTd.append(el('span', { class: 'fc-badge' }, '上乗せ'));
+      tr.append(nameTd, el('td', {}, String(r.p[t.key])), el('td', {}, String(r.c[t.key])), el('td', { class: cls(d) }, d ? sign(d) + Math.abs(d) : '—'), el('td', {}, man(V.adj[t.key] * r.f)));
+      tb.append(tr);
+    }
+    const tr = el('tr');
+    tr.append(el('td', {}, '月予算'), el('td', {}, man(r.prev)), el('td', {}, man(r.cur)), el('td', { class: cls(r.diff) }, sman(r.diff)), el('td'));
+    tb.append(tr);
+
+    const tot = d3.sum(res, (x) => x.cur), totPrev = d3.sum(res, (x) => x.prev);
+    const an = $('annual'); an.replaceChildren();
+    an.append(document.createTextNode(`参考：${year}年 年間 ${man(tot)}円（前年 ${man(totPrev)}円、`), el('span', { class: cls(tot - totPrev) }, pctv(tot / totPrev - 1)), document.createTextNode('）'));
+  });
+})();
+</script>
+
+</div></body></html>
